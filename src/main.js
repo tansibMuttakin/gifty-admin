@@ -98,6 +98,8 @@ import TriStateCheckbox from 'primevue/tristatecheckbox';
 
 import CodeHighlight from './AppCodeHighlight';
 
+import firebase from './firebase'
+
 router.beforeEach(function(to, from, next) {
     window.scrollTo(0, 0);
     next();
@@ -110,6 +112,7 @@ app.config.globalProperties.$appState = reactive({ inputStyle: 'outlined' });
 app.use(PrimeVue, { ripple: true });
 app.use(ConfirmationService);
 app.use(ToastService);
+app.use(firebase);
 app.use(router);
 
 app.directive('tooltip', Tooltip);
