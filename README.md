@@ -1,4 +1,4 @@
-# sigma
+# Gifty-Admin
 
 ## Project setup
 ```
