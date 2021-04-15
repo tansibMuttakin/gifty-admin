@@ -87,7 +87,15 @@
             sortable
           >
             <template #body="{ data }">
-              <img :src="data.imgUrl ?data.imgUrl:'assets/layout/images/product/product-placeholder.svg' " width="60" class="product-image" />
+              <img
+                :src="
+                  data.imgUrl
+                    ? data.imgUrl
+                    : 'assets/layout/images/product/product-placeholder.svg'
+                "
+                width="60"
+                class="product-image"
+              />
             </template>
           </Column>
           <Column
@@ -123,6 +131,22 @@
               data.address ? data.address : "N/A"
             }}</template>
           </Column>
+          <Column
+            field="status"
+            header="Status"
+            sortable
+            :filterMenuStyle="{ width: '14rem' }"
+            style="min-width: 10rem"
+          >
+            <template #body="{ data }"
+              ><span
+                :class="
+                  data.status == 'enable' ? 'p-badge-success' : 'p-badge-danger'
+                "
+                >{{ data.status }}</span
+              ></template
+            >
+          </Column>
           <Column>
             <template #body="slotProps">
               <div class="p-d-flex">
@@ -149,19 +173,23 @@
           class="p-fluid"
         >
           <img
-            :src="user.imgUrl?user.imgUrl:'assets/layout/images/product/product-placeholder.svg'"
+            :src="
+              user.imgUrl
+                ? user.imgUrl
+                : 'assets/layout/images/product/product-placeholder.svg'
+            "
             :alt="user.fullName"
             class="product-image"
             v-if="update"
           />
           <div class="p-field">
-            <label for="title">FullName</label>
+            <label for="fullName">FullName</label>
             <InputText
               id="fullName"
               v-model.trim="user.fullName"
               required="true"
               autofocus
-              :class="{ 'p-invalid': submitted && !product.title }"
+              :class="{ 'p-invalid': submitted && !user.fullName }"
             />
             <small class="p-invalid" v-if="submitted && !user.fullName"
               >Name is required.</small
@@ -194,6 +222,17 @@
             <div class="p-field p-col">
               <label for="quantity">Phone</label>
               <InputText id="quantity" v-model="user.phone" />
+            </div>
+          </div>
+          <div v-if="update" class="p-formgrid p-grid">
+            <div class="p-field p-col-6">
+              <label for="quantity">Status</label>
+              <Dropdown
+                v-model="selectedStatus"
+                :options="status"
+                optionLabel="name"
+                optionValue="value"
+              />
             </div>
           </div>
           <template #footer>
@@ -284,6 +323,8 @@
 import firebase from "../firebase";
 import db from "../db";
 import { FilterMatchMode, FilterOperator } from "primevue/api";
+import { server } from "../helper";
+import axios from "axios";
 
 export default {
   data() {
@@ -294,6 +335,7 @@ export default {
       latestUsers: [],
       update: false,
       image: {},
+      selectedStatus: "",
       deleteUserDialog: false,
       deleteSelectedUsersDialog: false,
       selectedUsers: null,
@@ -307,6 +349,10 @@ export default {
         },
       },
       loading: true,
+      status: [
+        { name: "Enable", value: "enable" },
+        { name: "Disable", value: "disable" },
+      ],
     };
   },
   mounted() {
@@ -319,7 +365,6 @@ export default {
       });
       this.latestUsers = [];
       this.loading = false;
-      console.log(this.users);
     });
   },
   methods: {
@@ -331,6 +376,9 @@ export default {
     hideDialog() {
       this.userDialog = false;
       this.submitted = false;
+      if (this.update) {
+        this.update = false;
+      }
       this.image = {};
     },
     previewImage(event) {
@@ -370,70 +418,78 @@ export default {
         );
       }
     },
-    saveUser() {
+    async saveUser() {
+      let uid = "";
       this.submitted = true;
+      this.user.status = 'enable';
       if (this.user.fullName.trim()) {
         this.uploadImage();
 
         console.log(this.user.imgUrl);
         this.user.created = firebase.firestore.Timestamp.now();
         this.users.push(this.user);
+        console.log(this.user);
+
+        // save user to firebase auth
+        try {
+          let userCredential = await firebase
+            .auth()
+            .createUserWithEmailAndPassword(this.user.email, "password");
+          // Signed in
+          let user = userCredential.user;
+          uid = user.uid;
+          console.log(user + "=>" + uid);
+        } catch (error) {
+          console.log(error);
+        }
 
         // save user to firestore
-
-        console.log(this.user);
-        db.collection("users")
-          .add(this.user)
-          .then(() => {
-            this.$toast.add({
-              severity: "success",
-              summary: "Successful",
-              detail: "User Created",
-              life: 3000,
-            });
-
-			firebase
-          .auth()
-          .createUserWithEmailAndPassword(this.user.email, 'password')
-          .then((userCredential) => {
-            // Signed in
-            var user = userCredential.user;
-			console.log(user);
-            // ...
-          })
-          .catch((error) => {
-            var errorCode = error.code;
-            var errorMessage = error.message;
-            console.log(errorCode, errorMessage);
+        try {
+          await db.collection("users").doc(uid).set(this.user);
+          this.$toast.add({
+            severity: "success",
+            summary: "Successful",
+            detail: "User Created",
+            life: 3000,
           });
 
-            this.userDialog = false;
-            this.user = {};
-            this.image = {};
-          });
+          this.userDialog = false;
+          this.user = {};
+          this.image = {};
+        } catch (error) {
+          console.log(error);
+        }
       }
     },
-    updateUser() {
+    async updateUser() {
       let { id, ...data } = this.user;
       let index = this.users.findIndex((obj) => obj.id == id);
       this.user.update = firebase.firestore.Timestamp.now();
       this.users[index] = data;
       this.userDialog = false;
-
-      db.collection("users")
-        .doc(this.user.id)
-        .update(this.user)
-        .then(() => {
-          this.$toast.add({
-            severity: "success",
-            summary: "Successful",
-            detail: "User Updated",
-            life: 3000,
-          });
+      try {
+        if (this.selectedStatus == "enable") {
+          this.user.status = 'enable';
+          await axios.get(`${server.baseURL}/api/user/enable/${this.user.id}`);
+        } else if (this.selectedStatus == "disable") {
+          this.user.status = 'disable';
+          await axios.get(`${server.baseURL}/api/user/disable/${this.user.id}`);
+        }
+        await db.collection("users").doc(this.user.id).update(this.user);
+        this.selectedStatus = '';
+        this.$toast.add({
+          severity: "success",
+          summary: "Successful",
+          detail: "User Updated",
+          life: 3000,
         });
+      } catch (error) {
+        console.log(error);
+      }
     },
     editUser(user) {
       this.user = { ...user };
+      this.selectedStatus = user.status;
       this.update = true;
       this.userDialog = true;
     },
@@ -444,29 +500,27 @@ export default {
     confirmDeleteSelected() {
       this.deleteSelectedUsersDialog = true;
     },
-    deleteUser() {
+    async deleteUser() {
       let index = this.users.findIndex((obj) => obj.id == this.user.id);
       this.users.splice(index, 1);
-      db.collection("users")
-        .doc(this.user.id)
-        .delete()
-        .then(() => {
-          this.$toast.add({
-            severity: "success",
-            summary: "Successful",
-            detail: "User deleted",
-            life: 3000,
-          });
-          this.deleteUserDialog = false;
-        })
-        .catch((error) => {
-          this.$toast.add({
-            severity: "danger",
-            summary: "Unsuccessful",
-            detail: `${error}`,
-            life: 3000,
-          });
+      try {
+        await axios.delete(`${server.baseURL}/api/user/delete/${this.user.id}`);
+        await db.collection("users").doc(this.user.id).delete();
+        this.$toast.add({
+          severity: "success",
+          summary: "Successful",
+          detail: "User deleted",
+          life: 3000,
         });
+        this.deleteUserDialog = false;
+      } catch (error) {
+        this.$toast.add({
+          severity: "danger",
+          summary: "Unsuccessful",
+          detail: `${error}`,
+          life: 3000,
+        });
+      }
     },
     deleteSelectedUsers() {
       this.users = this.users.filter(
@@ -488,6 +542,16 @@ export default {
 </script>
 
 <style scoped lang="scss">
+.p-badge-danger {
+  background: red;
+  padding: 5px;
+  color: white;
+}
+.p-badge-success {
+  background: rgb(68, 143, 78);
+  padding: 5px;
+  color: white;
+}
 .table-header {
   display: flex;
   justify-content: space-between;
