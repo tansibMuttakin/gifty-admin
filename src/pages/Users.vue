@@ -52,7 +52,13 @@
           paginatorTemplate="FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink CurrentPageReport RowsPerPageDropdown"
           :rowsPerPageOptions="[5, 10, 25, 50]"
           currentPageReportTemplate="Showing {first} to {last} of {totalRecords} entries"
-          :globalFilterFields="['fullName', 'email', 'address', 'phone']"
+          :globalFilterFields="[
+            'fullName',
+            'email',
+            'address',
+            'phone',
+            'status',
+          ]"
           responsiveLayout="scroll"
         >
           <template #header>
@@ -462,6 +468,7 @@ export default {
       }
     },
     async updateUser() {
+      this.loading=true;
       let { id, ...data } = this.user;
       let index = this.users.findIndex((obj) => obj.id == id);
       this.user.update = firebase.firestore.Timestamp.now();
@@ -476,6 +483,7 @@ export default {
           await axios.get(`${server.baseURL}/api/user/disable/${this.user.id}`);
         }
         await db.collection("users").doc(this.user.id).update(this.user);
+        this.loading = false;
         this.selectedStatus = '';
         this.$toast.add({
           severity: "success",
@@ -484,6 +492,7 @@ export default {
           life: 3000,
         });
       } catch (error) {
+        this.loading = false;
         console.log(error);
       }
     },
@@ -523,19 +532,31 @@ export default {
       }
     },
     deleteSelectedUsers() {
+      this.deleteSelectedUsersDialog = false;
+      this.loading=true;
       this.users = this.users.filter(
         (val) => !this.selectedUsers.includes(val)
       );
-      this.selectedUsers.forEach((val) => {
-        db.collection("users").doc(val.id).delete();
+      
+      this.selectedUsers.forEach(async (val) => {
+        try {
+          await axios.delete(`${server.baseURL}/api/user/delete/${val.id}`);
+          await db.collection("users").doc(val.id).delete();
+          this.$toast.add({
+            severity: "success",
+            summary: " Delete successful",
+            life: 3000,
+          });
+        } catch (error) {
+          this.$toast.add({
+            severity: "danger",
+            summary: "Unsuccessful",
+            detail: `${error}`,
+            life: 3000,
+          });
+        }
       });
-      this.deleteSelectedUsersDialog = false;
-      this.$toast.add({
-        severity: "success",
-        summary: "Successful",
-        detail: "Users deleted",
-        life: 3000,
-      });
+      this.loading=false; 
     },
   },
 };
