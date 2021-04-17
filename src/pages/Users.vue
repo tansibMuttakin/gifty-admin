@@ -406,6 +406,7 @@ export default {
     uploadImage() {
       const file = this.$refs.newImage.files[0];
       if (file) {
+        this.user.imageName = file.name;
         let storageRef = firebase.storage().ref();
         let uploadTask = storageRef.child("users/" + file.name).put(file);
         uploadTask.on(
@@ -415,11 +416,10 @@ export default {
             // Handle unsuccessful uploads
             console.log(error);
           },
-          () => {
-            uploadTask.snapshot.ref.getDownloadURL().then((downloadURL) => {
-              this.user.imgUrl = downloadURL;
-              console.log("should execute before");
-            });
+          async () => {
+            let downloadURL = await uploadTask.snapshot.ref.getDownloadURL();
+            this.user.imgUrl = downloadURL;
+            console.log("should execute before");
           }
         );
       }
@@ -427,10 +427,10 @@ export default {
     async saveUser() {
       let uid = "";
       this.submitted = true;
-      this.user.status = 'enable';
+      this.user.status = "enable";
       if (this.user.fullName.trim()) {
         this.uploadImage();
-
+        console.log("should execute after");
         console.log(this.user.imgUrl);
         this.user.created = firebase.firestore.Timestamp.now();
         this.users.push(this.user);
@@ -468,23 +468,29 @@ export default {
       }
     },
     async updateUser() {
-      this.loading=true;
+      this.loading = true;
       let { id, ...data } = this.user;
       let index = this.users.findIndex((obj) => obj.id == id);
       this.user.update = firebase.firestore.Timestamp.now();
       this.users[index] = data;
       this.userDialog = false;
+      this.uploadImage();
       try {
         if (this.selectedStatus == "enable") {
-          this.user.status = 'enable';
+          this.user.status = "enable";
           await axios.get(`${server.baseURL}/api/user/enable/${this.user.id}`);
         } else if (this.selectedStatus == "disable") {
-          this.user.status = 'disable';
+          this.user.status = "disable";
           await axios.get(`${server.baseURL}/api/user/disable/${this.user.id}`);
         }
+      } catch (error) {
+        console.log(error);
+      }
+
+      try {
         await db.collection("users").doc(this.user.id).update(this.user);
         this.loading = false;
-        this.selectedStatus = '';
+        this.selectedStatus = "";
         this.$toast.add({
           severity: "success",
           summary: "Successful",
@@ -513,6 +519,15 @@ export default {
       let index = this.users.findIndex((obj) => obj.id == this.user.id);
       this.users.splice(index, 1);
       try {
+        // if (this.user.imgUrl) {
+        //   let fileName = this.user.imgUrl
+        //   console.log(fileName);
+        //   // Create a reference to the file to delete
+        //   let storageRef = firebase.storage().ref();
+        //   let desertRef = storageRef.child("users/" + fileName);
+        //   await desertRef.delete();
+        // }
+
         await axios.delete(`${server.baseURL}/api/user/delete/${this.user.id}`);
         await db.collection("users").doc(this.user.id).delete();
         this.$toast.add({
@@ -533,11 +548,11 @@ export default {
     },
     deleteSelectedUsers() {
       this.deleteSelectedUsersDialog = false;
-      this.loading=true;
+      this.loading = true;
       this.users = this.users.filter(
         (val) => !this.selectedUsers.includes(val)
       );
-      
+
       this.selectedUsers.forEach(async (val) => {
         try {
           await axios.delete(`${server.baseURL}/api/user/delete/${val.id}`);
@@ -556,7 +571,7 @@ export default {
           });
         }
       });
-      this.loading=false; 
+      this.loading = false;
     },
   },
 };
