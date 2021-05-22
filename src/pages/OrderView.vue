@@ -164,7 +164,7 @@ export default {
     orderItems.forEach((orderItem) => {
       this.orderItems.push(orderItem);
     });
-    this.selectedStatus = !this.order.status;
+    this.selectedStatus = this.order.status;
     this.orderCreateDate = this.order.createdAt
       .toDate()
       .toLocaleDateString("en-BS");

@@ -124,9 +124,9 @@
             style="min-width: 8rem"
           >
             <template #body="{ data }">
-              <span :class="data.pending? 'p-badge-danger':'p-badge-success'">{{
-                data.pending ? "Pending" : "Delivered"
-              }}</span>
+              <span :class="data.status=='Pending'? 'p-badge-danger':'p-badge-success'">
+                {{data.status}}
+              </span>
             </template>
           </Column>
           <Column>
