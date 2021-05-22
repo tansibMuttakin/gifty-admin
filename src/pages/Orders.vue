@@ -140,7 +140,7 @@
                 <Button
                   icon="pi pi-trash"
                   class="p-button-rounded p-button-warning"
-                  @click="deleteOrder(slotProps.data)"
+                  @click="confirmDeleteOrder(slotProps.data)"
                 />
               </div>
             </template>
@@ -315,8 +315,8 @@
         </Dialog> -->
 
         <!-- single product delete modal -->
-        <!-- <Dialog
-          v-model:visible="deleteProductDialog"
+        <Dialog
+          v-model:visible="deleteOrderDialog"
           :style="{ width: '450px' }"
           header="Confirm"
           :modal="true"
@@ -326,9 +326,8 @@
               class="pi pi-exclamation-triangle p-mr-3"
               style="font-size: 2rem"
             />
-            <span v-if="product"
-              >Are you sure you want to delete <b>{{ product.title }}</b
-              >?</span
+            <span v-if="order"
+              >Are you sure you want to delete orderId- <b>{{ order.orderId }}</b> by <b>{{order.name}}</b> ?</span
             >
           </div>
           <template #footer>
@@ -336,16 +335,16 @@
               label="No"
               icon="pi pi-times"
               class="p-button-text"
-              @click="deleteProductDialog = false"
+              @click="deleteOrderDialog = false"
             />
             <Button
               label="Yes"
               icon="pi pi-check"
               class="p-button-text"
-              @click="deleteProduct"
+              @click="deleteOrder"
             />
           </template>
-        </Dialog> -->
+        </Dialog>
 
         <!-- multiple product delete modal -->
         <!-- <Dialog
@@ -399,6 +398,8 @@ export default {
           ],
         },
       },
+      order:{},
+      deleteOrderDialog : false,
       loading: true,
     };
   },
@@ -417,6 +418,35 @@ export default {
       let id = order.id;
       this.$router.push({ name: "orderView", params: { id } });
     },
+    confirmDeleteOrder(order){
+      this.order = order;
+      this.deleteOrderDialog = true;
+      console.log(this.order);
+    },
+    deleteOrder(){
+      let index = this.orders.findIndex((obj) => obj.id == this.order.id);
+      this.orders.splice(index, 1);
+      db.collection("orders")
+        .doc(this.order.id)
+        .delete()
+        .then(() => {
+          this.$toast.add({
+            severity: "success",
+            summary: "Successful",
+            detail: "Order deleted",
+            life: 3000,
+          });
+          this.deleteOrderDialog = false;
+        })
+        .catch((error) => {
+          this.$toast.add({
+            severity: "danger",
+            summary: "Unsuccessful",
+            detail: `${error}`,
+            life: 3000,
+          });
+        });
+    }
   },
 };
 </script>

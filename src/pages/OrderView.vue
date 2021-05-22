@@ -144,7 +144,7 @@ export default {
         .collection("orders")
         .doc(this.id)
         .update({
-          pending: event.value == "Pending" ? true : false,
+          status: event.value
         });
       this.$toast.add({
         severity: "success",
@@ -164,7 +164,7 @@ export default {
     orderItems.forEach((orderItem) => {
       this.orderItems.push(orderItem);
     });
-    this.selectedStatus = !this.order.pending ? "Delivered" : "Pending";
+    this.selectedStatus = !this.order.status;
     this.orderCreateDate = this.order.createdAt
       .toDate()
       .toLocaleDateString("en-BS");
