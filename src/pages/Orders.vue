@@ -347,8 +347,8 @@
         </Dialog>
 
         <!-- multiple product delete modal -->
-        <!-- <Dialog
-          v-model:visible="deleteSelectedProductsDialog"
+        <Dialog
+          v-model:visible="deleteSelectedOrdersDialog"
           :style="{ width: '450px' }"
           header="Confirm"
           :modal="true"
@@ -358,8 +358,8 @@
               class="pi pi-exclamation-triangle p-mr-3"
               style="font-size: 2rem"
             />
-            <span v-if="product"
-              >Are you sure you want to delete the selected products?</span
+            <span v-if="selectedOrders"
+              >Are you sure you want to delete the selected orders?</span
             >
           </div>
           <template #footer>
@@ -367,16 +367,16 @@
               label="No"
               icon="pi pi-times"
               class="p-button-text"
-              @click="deleteSelectedProductsDialog = false"
+              @click="deleteSelectedOrdersDialog = false"
             />
             <Button
               label="Yes"
               icon="pi pi-check"
               class="p-button-text"
-              @click="deleteSelectedProducts"
+              @click="deleteSelectedOrders"
             />
           </template>
-        </Dialog> -->
+        </Dialog>
       </div>
     </div>
   </div>
@@ -389,6 +389,7 @@ export default {
   data() {
     return {
       orders: [],
+      selectedOrders:[],
       filters: {
         global: { value: null, matchMode: FilterMatchMode.CONTAINS },
         name: {
@@ -400,18 +401,25 @@ export default {
       },
       order:{},
       deleteOrderDialog : false,
+      deleteSelectedOrdersDialog: false,
       loading: true,
     };
   },
   async created() {
     let orders = await db.collection("orders").get("orders");
-    orders.forEach((doc) => {
-      let id = doc.id;
-      let data = { id, ...doc.data() };
-      this.orders.push(data);
+    if (orders.empty) {
       this.loading = false;
-      console.log(doc.data());
-    });
+    }
+    else {
+
+      orders.forEach((doc) => {
+        let id = doc.id;
+        let data = { id, ...doc.data() };
+        this.orders.push(data);
+        this.loading = false;
+        console.log(doc.data());
+      });
+    }
   },
   methods: {
     viewOrder(order) {
@@ -422,6 +430,9 @@ export default {
       this.order = order;
       this.deleteOrderDialog = true;
       console.log(this.order);
+    },
+    confirmDeleteSelected(){
+      this.deleteSelectedOrdersDialog = true;
     },
     deleteOrder(){
       let index = this.orders.findIndex((obj) => obj.id == this.order.id);
@@ -446,6 +457,21 @@ export default {
             life: 3000,
           });
         });
+    },
+    deleteSelectedOrders(){
+      this.orders = this.orders.filter(
+        (val) => !this.selectedOrders.includes(val)
+      );
+      this.selectedOrders.forEach((val) => {
+        db.collection("orders").doc(val.id).delete();
+      });
+      this.deleteSelectedOrdersDialog = false;
+      this.$toast.add({
+        severity: "success",
+        summary: "Successful",
+        detail: "All Selected Products deleted",
+        life: 3000,
+      });
     }
   },
 };
