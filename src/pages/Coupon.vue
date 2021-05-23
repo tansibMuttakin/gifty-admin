@@ -78,12 +78,12 @@
                 <Button
                   icon="pi pi-eye"
                   class="p-button-rounded p-button-success p-mr-2"
-                  @click="viewOrder(slotProps.data)"
+                  @click="editCoupon(slotProps.data)"
                 />
                 <Button
                   icon="pi pi-trash"
                   class="p-button-rounded p-button-warning"
-                  @click="confirmDeleteOrder(slotProps.data)"
+                  @click="confirmDeleteCoupon(slotProps.data)"
                 />
               </div>
             </template>
@@ -258,6 +258,30 @@ export default {
             this.coupon = {};
           });
       }
+    },
+    updateCoupon() {
+      let { id, ...data } = this.coupon;
+      let index = this.coupons.findIndex((obj) => obj.id == id);
+      this.coupons.update = firebase.firestore.Timestamp.now();
+      this.coupons[index] = data;
+      this.couponDialog = false;
+
+      db.collection("coupons")
+        .doc(this.coupon.id)
+        .update(this.coupon)
+        .then(() => {
+          this.$toast.add({
+            severity: "success",
+            summary: "Successful",
+            detail: "Coupon Updated",
+            life: 3000,
+          });
+        });
+    },
+    editCoupon(coupon) {
+      this.coupon = { ...coupon };
+      this.update = true;
+      this.couponDialog = true;
     },
   },
   async created() {
