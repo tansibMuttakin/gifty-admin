@@ -133,8 +133,8 @@
         </Dialog>
 
         <!-- single product delete modal -->
-        <!-- <Dialog
-          v-model:visible="deleteOrderDialog"
+        <Dialog
+          v-model:visible="deleteCouponDialog"
           :style="{ width: '450px' }"
           header="Confirm"
           :modal="true"
@@ -144,8 +144,8 @@
               class="pi pi-exclamation-triangle p-mr-3"
               style="font-size: 2rem"
             />
-            <span v-if="order"
-              >Are you sure you want to delete orderId- <b>{{ order.orderId }}</b> by <b>{{order.name}}</b> ?</span
+            <span v-if="coupon"
+              >Are you sure you want to delete coupon code- <b>{{ coupon.code }}</b> ?</span
             >
           </div>
           <template #footer>
@@ -153,16 +153,16 @@
               label="No"
               icon="pi pi-times"
               class="p-button-text"
-              @click="deleteOrderDialog = false"
+              @click="deleteCouponDialog = false"
             />
             <Button
               label="Yes"
               icon="pi pi-check"
               class="p-button-text"
-              @click="deleteOrder"
+              @click="deleteCoupon"
             />
           </template>
-        </Dialog> -->
+        </Dialog>
 
         <!-- multiple product delete modal -->
         <!-- <Dialog
@@ -214,6 +214,7 @@ export default {
         discount: "",
       },
       couponDialog: false,
+      deleteCouponDialog: false,
       filters: {
         global: { value: null, matchMode: FilterMatchMode.CONTAINS },
         name: {
@@ -282,6 +283,34 @@ export default {
       this.coupon = { ...coupon };
       this.update = true;
       this.couponDialog = true;
+    },
+    confirmDeleteCoupon(coupon) {
+      this.coupon = coupon;
+      this.deleteCouponDialog = true;
+    },
+    deleteCoupon() {
+      let index = this.coupons.findIndex((obj) => obj.id == this.coupon.id);
+      this.coupons.splice(index, 1);
+      db.collection("coupons")
+        .doc(this.coupon.id)
+        .delete()
+        .then(() => {
+          this.$toast.add({
+            severity: "success",
+            summary: "Successful",
+            detail: "Coupon deleted",
+            life: 3000,
+          });
+          this.deleteCouponDialog = false;
+        })
+        .catch((error) => {
+          this.$toast.add({
+            severity: "danger",
+            summary: "Unsuccessful",
+            detail: `${error}`,
+            life: 3000,
+          });
+        });
     },
   },
   async created() {
