@@ -49,6 +49,9 @@ export default {
                 },
                 {
                     label:'Users', icon: 'pi pi-users', to: '/users'
+                },
+                {
+                    label:'Coupon', icon: 'pi pi-percentage', to: '/coupon'
                 }
             ]
         }

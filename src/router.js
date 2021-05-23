@@ -22,6 +22,11 @@ const routes = [
                 component: () => import('./pages/Users.vue'),
             },
             {
+                path: '/coupon',
+                name: 'coupon',
+                component: () => import('./pages/Coupon.vue'),
+            },
+            {
                 path: 'products',
                 name: 'products',
                 component: () => import('./pages/Products.vue'),
